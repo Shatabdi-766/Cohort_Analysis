@@ -19,3 +19,4 @@ Cohort Analysis with SQL This repository contains a project for analyzing custom
 - Python
 
 ### **Dataset** :
+The dataset used in this project is available in CSV format. You can download it [here](./).
