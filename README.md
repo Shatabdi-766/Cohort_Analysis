@@ -357,7 +357,7 @@ SELECT MAX(INVOICEDATE) as MAX_INVOICEDATE FROM sales_retail_ii_cleaned;
 --Output--
 | MAX_INVOICEDATE |
 |-----------------|
-| 12/9/2011       |
+| 09-12-11        |
 
 - The latest invoice date in the dataset is December 9, 2011. This indicates that the dataset covers sales activity up to this date, providing a snapshot of the business's performance leading up to the end of 2011.
 
@@ -702,5 +702,655 @@ Customer 12349: December 21, 2011, to January 21, 2012.
 
 3. **Segment Customers:** Group customers based on their second purchase behavior (e.g., those who made a second purchase vs. those who 
         did not) to tailor marketing strategies.
+
+## Identify customers who made a purchase in the second month :
+```sql
+WITH FIRST_PURCHASE_DATE AS (
+
+-- Find the first purchase date for each customer
+SELECT CUSTOMERID,
+MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE
+FROM sales_retail_ii_cleaned
+GROUP BY CustomerID
+
+),
+
+SECOND_MONTH_ACTIVITY AS (
+-- Calculate the start and end of the second month after the first purchase
+SELECT FP.CUSTOMERID,
+date_add(FP.FIRST_PURCHASE_DATE, INTERVAL 1 MONTH) AS START_SECOND_PURCHASE_DATE,
+date_add(FP.FIRST_PURCHASE_DATE, INTERVAL 2 MONTH) AS END_SECOND_PURCHASE_DATE
+FROM FIRST_PURCHASE_DATE FP
+
+),
+
+SECOND_PURCHASE_DATE AS (
+    -- Step 3: Identify customers who made a purchase in the second month
+    SELECT 
+        SMA.CUSTOMERID,
+        SMA.START_SECOND_PURCHASE_DATE AS Sec_M_PURCHASE_DATE
+    FROM SECOND_MONTH_ACTIVITY SMA
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON SMA.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE >= SMA.START_SECOND_PURCHASE_DATE
+        AND SR.INVOICEDATE < SMA.END_SECOND_PURCHASE_DATE
+        GROUP BY 1,2
+    
+)
+
+SELECT * FROM SECOND_PURCHASE_DATE;
+```
+--Output--
+| CUSTOMERID | Sec_M_PURCHASE_DATE|
+|------------|--------------|
+| 14606      | 01-01-11     |
+| 17841      | 01-01-11     |
+| 14210      | 03-01-11     |
+| 14180      | 02-01-11     |
+| 16029      | 01-01-11     |
+| 16725      | 03-01-11     |
+| 15235      | 01-01-11     |
+| 13694      | 01-01-11     |
+| 13798      | 02-01-11     |
+| 12921      | 01-01-11     |
+| 15311      | 01-01-11     |
+| 15769      | 03-01-11     |
+| 13089      | 05-01-11     |
+| 13715      | 02-01-11     |
+
+- The dataset provides the second purchase dates for several customers, with most purchases occurring in early January 2011:
+
+- **Key Dates:**
+
+- The majority of second purchases happened on January 1, 2011, indicating a strong start to the new year.
+
+- Other purchases were made on January 2, 3, and 5, 2011, suggesting continued engagement in the first week of January.
+
+- **Customer Behavior:**
+
+- Customers like 14606, 17841, and 16029 made their second purchase on January 1, 2011, showing immediate re-engagement.
+
+- Customers like 13089 made their second purchase on January 5, 2011, indicating a slightly delayed but still prompt re-engagement.
+
+## Identify customers who made a purchase in the third month :
+
+**A join quarter is a concept used in customer segmentation and RFM (Recency, Frequency, Monetary) analysis. It refers to the quarter (3-month period) in which a customer made their first purchase or joined the business. This metric helps in understanding customer behavior over time and segmenting customers based on their acquisition period.**
+
+```sql
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        QUARTER(MIN(INVOICEDATE)) AS JOIN_QUARTER
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+ThirdMonthActivity AS (
+    -- Step 2: Calculate the start and end of the third month after the first purchase
+    SELECT 
+        FP.CUSTOMERID,
+        FP.JOIN_QUARTER,
+        DATE_ADD(FP.FIRST_PURCHASE_DATE, INTERVAL 2 MONTH) AS START_THIRD_MONTH,
+        DATE_ADD(FP.FIRST_PURCHASE_DATE, INTERVAL 3 MONTH) AS END_THIRD_MONTH
+    FROM FirstPurchase FP
+),
+
+ThirdMonthPurchases AS (
+    -- Step 3: Identify customers who made a purchase in the third month
+    SELECT 
+        TMA.CUSTOMERID,
+        TMA.JOIN_QUARTER
+    FROM ThirdMonthActivity TMA
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON TMA.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE >= TMA.START_THIRD_MONTH
+        AND SR.INVOICEDATE < TMA.END_THIRD_MONTH
+    GROUP BY TMA.CUSTOMERID, TMA.JOIN_QUARTER
+)
+
+SELECT * FROM THIRDMONTHPURCHASES;
+```
+--Output--
+| CUSTOMERID | JOIN_QUARTER |
+|------------|-------------|
+| 14911      | 4           |
+| 14496      | 4           |
+| 17511      | 4           |
+| 14312      | 1           |
+| 17800      | 1           |
+| 17409      | 2           |
+| 13752      | 2           |
+| 17405      | 3           |
+| 16764      | 3           |
+
+- The dataset provides the join quarters for several customers, indicating the quarter in which they made their first purchase:
+
+**Customers Joining in Q4:**
+
+- 14911, 14496, and 17511 joined in Q4 (October–December).
+
+- This could indicate a strong holiday season effect, as Q4 often includes year-end and festive shopping periods.
+
+**Customers Joining in Q1:**
+
+- 14312 and 17800 joined in Q1 (January–March).
+
+- This might reflect New Year promotions or post-holiday sales.
+
+**Customers Joining in Q2 and Q3:**
+
+- 17409 and 13752 joined in Q2 (April–June).
+
+- 17405 and 16764 joined in Q3 (July–September).
+
+- These quarters may represent steady customer acquisition outside of peak holiday seasons.
+
+- **Key Observations:**
+  
+1. **Seasonal Trends:** Higher customer acquisition in Q4 suggests the holiday season drives new customer engagement.
+
+2. **Year-Round Acquisition:** Customers joining in Q1, Q2, and Q3 indicate consistent acquisition efforts throughout the year.
+
+## The percentage of customers who made a purchase in the second month :
+```sql
+-- calculate the percentage of customers who made a purchase in the second month after their first purchase.
+WITH FIRSTPURCHASE AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+SECOND_MONTH_ACTIVITY AS (
+    -- Step 2: Calculate the start and end of the second month after the first purchase
+    SELECT 
+        FP.CUSTOMERID,
+        DATE_ADD(FP.FIRST_PURCHASE_DATE, INTERVAL 1 MONTH) AS START_SECOND_PURCHASE_DATE,
+        DATE_ADD(FP.FIRST_PURCHASE_DATE, INTERVAL 2 MONTH) AS END_SECOND_PURCHASE_DATE
+    FROM FIRSTPURCHASE FP
+),
+
+SECOND_PURCHASE_DATE AS (
+    -- Step 3: Identify customers who made a purchase in the second month
+    SELECT 
+        SMA.CUSTOMERID
+    FROM SECOND_MONTH_ACTIVITY SMA
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON SMA.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE >= SMA.START_SECOND_PURCHASE_DATE
+        AND SR.INVOICEDATE < SMA.END_SECOND_PURCHASE_DATE
+    GROUP BY SMA.CUSTOMERID
+)
+
+-- Step 4: Calculate the percentage of customers who made a purchase in the second month
+SELECT 
+    COUNT(DISTINCT SPD.CUSTOMERID) * 100.0 / COUNT(DISTINCT FP.CUSTOMERID) AS PercentageRetained
+FROM FIRSTPURCHASE FP
+LEFT JOIN SECOND_PURCHASE_DATE SPD
+    ON FP.CUSTOMERID = SPD.CUSTOMERID;
+```
+--Output--
+| PercentageRetained |
+|--------------------|
+| 23.16202           |
+
+- A retention rate of 23.16% indicates that approximately 1 in 4 customers continued their relationship with the business.
+- This suggests room for improvement in retaining customers and reducing churn.
+
+## Cohort Month :
+```sql
+WITH CTE1 AS (
+SELECT 
+    InvoiceNo,
+    InvoiceDate,
+    CUSTOMERID,
+    abs(ROUND(QUANTITY * UNITPRICE, 2)) AS REVENUE
+FROM
+    sales_retail_ii_cleaned
+WHERE
+    CustomerID IS NOT NULL
+ORDER BY CustomerID
+),
+
+CTE2 AS (
+SELECT 
+        InvoiceNo, 
+        CUSTOMERID, 
+        INVOICEDATE, 
+        DATE_FORMAT(INVOICEDATE, '%Y-%m-01') AS PURCHASE_MONTH,
+        DATE_FORMAT(MIN(INVOICEDATE) OVER (PARTITION BY CUSTOMERID ORDER BY INVOICEDATE), '%Y-%m-01') AS 
+        FIRST_PURCHASE_MONTH,
+        REVENUE
+    FROM CTE1
+
+),
+CTE3 AS (
+SELECT 
+CUSTOMERID,
+FIRST_PURCHASE_MONTH,
+concat(
+'MONTH_',
+PERIOD_DIFF(
+EXTRACT(YEAR_MONTH FROM PURCHASE_MONTH),
+EXTRACT(YEAR_MONTH FROM FIRST_PURCHASE_MONTH)
+)) AS COHORT_MONTH
+FROM CTE2
+)
+SELECT * FROM CTE3;
+```
+--Output--
+| CUSTOMERID | FIRST_PURCHASE_MONTH | COHORT_MONTH |
+|------------|----------------------|-------------|
+| 12346      | 01-01-11             | MONTH_0     |
+| 12347      | 01-12-10             | MONTH_0     |
+| 12347      | 01-12-10             | MONTH_0     |
+| 12347      | 01-12-10             | MONTH_0     |
+| 12347      | 01-12-10             | MONTH_1     |
+| 12347      | 01-12-10             | MONTH_1     |
+| 12347      | 01-12-10             | MONTH_1     |
+| 12347      | 01-12-10             | MONTH_1     |
+| 12347      | 01-12-10             | MONTH_1     |
+| 12347      | 01-12-10             | MONTH_1     |
+| 12347      | 01-12-10             | MONTH_4     |
+| 12347      | 01-12-10             | MONTH_4     |
+| 12347      | 01-12-10             | MONTH_4     |
+| 12347      | 01-12-10             | MONTH_6     |
+| 12347      | 01-12-10             | MONTH_6     |
+| 12347      | 01-12-10             | MONTH_6     |
+| 12347      | 01-12-10             | MONTH_8     |
+| 12347      | 01-12-10             | MONTH_8     |
+| 12347      | 01-12-10             | MONTH_8     |
+
+- The dataset provides a cohort analysis for customers based on their first purchase month and subsequent engagement over time:
+
+**Customer 12346:**
+
+**First Purchase Month:** January 2011 (MONTH_0).
+
+- No further purchases recorded, indicating this customer did not return after their initial purchase.
+
+**Customer 12347:**
+
+- First Purchase Month: December 2010 (MONTH_0).
+
+- Made multiple purchases in subsequent months:
+
+MONTH_1: January 2011.
+
+MONTH_4: April 2011.
+
+MONTH_6: June 2011.
+
+MONTH_8: August 2011.
+
+- This customer shows consistent re-engagement over time, indicating strong loyalty.
+
+- **Key Observations:**
+  
+- **Retention Patterns:**
+
+- Customer 12347 demonstrates a pattern of repeat purchases, with activity in months 1, 4, 6, and 8 after their first purchase.
+
+- Customer 12346, on the other hand, did not make any repeat purchases, representing a churned customer.
+
+- **Cohort Analysis:** Tracking customer behavior over time (e.g., MONTH_0, MONTH_1, etc.) helps identify retention trends and the effectiveness of engagement strategies.
+
+- **Actionable Steps:**
+
+1. **Retain Loyal Customers:** For customers like 12347, implement loyalty programs or exclusive offers to maintain their engagement.
+
+2. **Re-Engage Churned Customers:** For customers like 12346, develop win-back campaigns, such as personalized discounts or reminders, to encourage repeat purchases.
+
+3. **Analyze Cohort Performance:** Compare retention rates across different cohorts (e.g., customers who joined in different months) to identify trends and optimize strategies.
+
+## Count the number of repeat purchases for each customer :
+```sql
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        DATE_FORMAT(MIN(INVOICEDATE), '%Y-%m') AS COHORT_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+RepeatPurchases AS (
+    -- Step 2: Count the number of repeat purchases for each customer
+    SELECT 
+        FP.CUSTOMERID,
+        FP.COHORT_MONTH,
+        COUNT(SR.INVOICENO) - 1 AS REPEAT_PURCHASE_COUNT
+    FROM FirstPurchase FP
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON FP.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE > FP.FIRST_PURCHASE_DATE
+    GROUP BY FP.CUSTOMERID, FP.COHORT_MONTH
+)
+
+SELECT * FROM RepeatPurchases;
+```
+--Output--
+| CUSTOMERID | COHORT_MONTH | REPEAT_PURCHASE_COUNT |
+|------------|-------------|----------------------|
+| 12347      | 12-2010     | 150                  |
+| 12348      | 12-2010     | 13                   |
+| 12352      | 02-2011     | 69                   |
+| 12356      | 01-2011     | 22                   |
+| 12358      | 07-2011     | 6                    |
+| 12359      | 01-2011     | 231                  |
+| 12360      | 05-2011     | 83                   |
+| 12362      | 02-2011     | 238                  |
+| 12363      | 04-2011     | 6                    |
+| 12364      | 08-2011     | 50                   |
+| 12370      | 12-2010     | 83                   |
+| 12371      | 10-2011     | 0                    |
+| 12372      | 02-2011     | 31                   |
+| 12375      | 09-2011     | 5                    |
+| 12377      | 12-2010     | 33                   |
+| 12379      | 06-2011     | 19                   |
+| 12380      | 06-2011     | 67                   |
+| 12381      | 08-2011     | 24                   |
+| 12383      | 12-2010     | 61                   |
+
+- The dataset provides repeat purchase counts for customers, grouped by their cohort month (the month of their first purchase). This highlights customer loyalty and engagement over time:
+
+1. **Top Performers:**
+
+**Customer 12359:** Made 231 repeat purchases after joining in January 2011.
+
+**Customer 12362:** Made 238 repeat purchases after joining in February 2011.
+
+- These customers demonstrate exceptional loyalty and high engagement.
+
+2. **Moderate Performers:**
+
+**Customer 12347:** Made 150 repeat purchases after joining in December 2010.
+
+**Customer 12360:** Made 83 repeat purchases after joining in May 2011.
+
+- These customers show consistent but moderate engagement.
+
+3. **Low Performers:**
+
+**Customer 12371:** Made 0 repeat purchases after joining in October 2011.
+
+**Customer 12363:** Made only 6 repeat purchases after joining in April 2011.
+
+- These customers represent opportunities for re-engagement.
+
+- **Key Observations:**
+  
+1. **High Engagement:** Customers like 12359 and 12362 are highly valuable and should be nurtured through loyalty programs or exclusive 
+     offers.
+
+2. **Low Engagement:** Customers like 12371 and 12363 may require targeted campaigns to re-engage them.
+
+3. **Cohort Trends:** Customers who joined in December 2010 and January–February 2011 show higher repeat purchase counts, possibly due to effective onboarding or seasonal promotions.
+
+- **Actionable Steps:**
+  
+1. **Reward Loyal Customers:** Offer exclusive perks, discounts, or early access to new products for high-performing customers like 12359 and 12362.
+
+2. **Re-Engage Low Performers:** Implement win-back campaigns, such as personalized offers or surveys, to understand and address their lack of engagement.
+
+3. **Analyze Cohort Performance:** Investigate why certain cohorts (e.g., December 2010 and January–February 2011) show higher engagement and replicate successful strategies.
+
+## Distribution of Repeat Purchases :
+```sql
+-- Distribution of Repeat Purchases
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        DATE_FORMAT(MIN(INVOICEDATE), '%Y-%m') AS COHORT_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+RepeatPurchases AS (
+    -- Step 2: Count the number of repeat purchases for each customer
+    SELECT 
+        FP.CUSTOMERID,
+        FP.COHORT_MONTH,
+        COUNT(SR.INVOICENO) - 1 AS REPEAT_PURCHASE_COUNT
+    FROM FirstPurchase FP
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON FP.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE > FP.FIRST_PURCHASE_DATE
+    GROUP BY FP.CUSTOMERID, FP.COHORT_MONTH
+)
+
+-- Step 3: Calculate the distribution of repeat purchases for each cohort
+SELECT 
+    COHORT_MONTH,
+    REPEAT_PURCHASE_COUNT,
+    COUNT(CUSTOMERID) AS CUSTOMER_COUNT
+FROM RepeatPurchases
+GROUP BY COHORT_MONTH, REPEAT_PURCHASE_COUNT
+ORDER BY COHORT_MONTH, REPEAT_PURCHASE_COUNT ASC;
+```
+--Output--
+
+| COHORT_MONTH | REPEAT_PURCHASE_COUNT | CUSTOMER_COUNT |
+|-------------|----------------------|---------------|
+| 2010-12     | 0                    | 9             |
+| 2010-12     | 1                    | 7             |
+| 2010-12     | 2                    | 5             |
+| 2010-12     | 3                    | 6             |
+| 2010-12     | 4                    | 4             |
+| 2010-12     | 5                    | 3             |
+| 2010-12     | 6                    | 5             |
+| 2010-12     | 7                    | 4             |
+| 2010-12     | 8                    | 8             |
+| 2010-12     | 9                    | 7             |
+| 2010-12     | 10                   | 4             |
+| 2010-12     | 11                   | 4             |
+| 2010-12     | 12                   | 3             |
+| 2010-12     | 13                   | 6             |
+| 2010-12     | 18                   | 10            |
+| 2010-12     | 19                   | 8             |
+| 2010-12     | 20                   | 10            |
+| 2010-12     | 21                   | 9             |
+| 2010-12     | 22                   | 6             |
+| 2010-12     | 23                   | 7             |
+| 2010-12     | 24                   | 2             |
+| 2010-12     | 25                   | 4             |
+| 2010-12     | 26                   | 5             |
+| 2011-01     | 490                  | 1             |
+| 2011-01     | 495                  | 1             |
+| 2011-01     | 559                  | 1             |
+| 2011-01     | 580                  | 1             |
+| 2011-01     | 669                  | 1             |
+| 2011-01     | 698                  | 1             |
+| 2011-01     | 804                  | 1             |
+| 2011-01     | 832                  | 1             |
+| 2011-01     | 947                  | 1             |
+| 2011-01     | 1637                 | 1             |
+| 2011-02     | 0                    | 4             |
+| 2011-02     | 1                    | 5             |
+| 2011-02     | 2                    | 5             |
+| 2011-02     | 3                    | 5             |
+| 2011-02     | 4                    | 4             |
+| 2011-02     | 5                    | 3             |
+| 2011-02     | 7                    | 2             |
+| 2011-02     | 8                    | 8             |
+| 2011-02     | 9                    | 10            |
+| 2011-02     | 10                   | 4             |
+| 2011-03     | 330                  | 1             |
+| 2011-03     | 343                  | 1             |
+| 2011-03     | 352                  | 1             |
+
+- The dataset provides a cohort-based analysis of repeat purchase behavior, showing the distribution of repeat purchases for customers who joined in specific months.
+
+- **Key Observations:**
+  
+1. **December 2010 Cohort:**
+
+- **Repeat Purchase Distribution:** Most customers made 0–26 repeat purchases, with the majority falling in the 0–10 range. A smaller 
+   group made 18–26 repeat purchases, indicating moderate to high engagement.
+
+- **Customer Count:**
+
+ 1. 9 customers made 0 repeat purchases, representing churned customers.
+
+2. 10 customers made 18–20 repeat purchases, showing strong loyalty.
+
+2. **January 2011 Cohort:**
+
+- **Repeat Purchase Distribution:** A few customers made exceptionally high repeat purchases (e.g., 1637, 947, 832). These outliers 
+  represent highly engaged, loyal customers.
+
+- **Customer Count:** Each high-repeat customer is unique, indicating a small but highly valuable segment.
+
+3. **February 2011 Cohort:**
+
+- **Repeat Purchase Distribution:** Similar to December 2010, most customers made 0–10 repeat purchases. A smaller group made 8–10 
+    repeat purchases, showing moderate engagement.
+
+ - **Customer Count:**
+
+1. 4 customers made 0 repeat purchases, indicating churn.
+
+2. 10 customers made 9 repeat purchases, representing a loyal segment.
+
+4. **March 2011 Cohort:**
+
+- **Repeat Purchase Distribution:** A few customers made 330–352 repeat purchases, indicating high engagement.
+
+- **Customer Count:** Each high-repeat customer is unique, similar to the January 2011 cohort.
+
+- **Actionable Insights:**
+
+ 1. **High-Engagement Customers:** Customers with hundreds of repeat purchases (e.g., 1637, 947, 832) are highly valuable.
+
+**Action:** Reward these customers with loyalty programs, exclusive offers, or personalized experiences to maintain their engagement.
+
+2. **Moderate-Engagement Customers:** Customers with 8–26 repeat purchases (e.g., 18–26 in December 2010, 8–10 in February 2011) 
+     represent a loyal but under-optimized segment.
+
+**Action:** Implement targeted upselling or cross-selling strategies to increase their purchase frequency.
+
+3. **Churned Customers:** Customers with 0 repeat purchases (e.g., 9 in December 2010, 4 in February 2011) represent lost revenue opportunities.
+
+**Action:** Launch win-back campaigns, such as personalized discounts or surveys, to understand and address their reasons for churn.
+
+4. **Cohort-Specific Strategies:**
+
+- December 2010 and February 2011 Cohorts: Focus on improving retention and increasing repeat purchases for the moderate-engagement 
+  group.
+
+- January and March 2011 Cohorts: Leverage the high-engagement customers to drive advocacy and referrals.
+
+## Analyze the frequency of repeat purchases for each cohort :
+```sql
+-- analyze the frequency of repeat purchases for each cohort
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        DATE_FORMAT(MIN(INVOICEDATE), '%Y-%m') AS COHORT_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+RepeatPurchases AS (
+    -- Step 2: Count the number of repeat purchases for each customer
+    SELECT 
+        FP.CUSTOMERID,
+        FP.COHORT_MONTH,
+        COUNT(SR.INVOICENO) - 1 AS REPEAT_PURCHASE_COUNT
+    FROM FirstPurchase FP
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON FP.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE > FP.FIRST_PURCHASE_DATE
+    GROUP BY FP.CUSTOMERID, FP.COHORT_MONTH
+)
+
+-- Step 3: Calculate the average repeat purchase count for each cohort
+SELECT 
+    COHORT_MONTH,
+    AVG(REPEAT_PURCHASE_COUNT) AS AVG_REPEAT_PURCHASES
+FROM RepeatPurchases
+GROUP BY COHORT_MONTH
+ORDER BY COHORT_MONTH;
+```
+--Output--
+| COHORT_MONTH | AVG_REPEAT_PURCHASES |
+|-------------|----------------------|
+| 2010-12     | 192.8497             |
+| 2011-01     | 109.1209             |
+| 2011-02     | 74.2474              |
+| 2011-03     | 71.6928              |
+| 2011-04     | 61.2915              |
+| 2011-05     | 50.2368              |
+| 2011-06     | 54.2614              |
+| 2011-07     | 53.1835              |
+| 2011-08     | 91.4778              |
+| 2011-09     | 45.5461              |
+| 2011-10     | 44.6695              |
+| 2011-11     | 26.9565              |
+
+- The dataset provides the average repeat purchases for customers grouped by their cohort month (the month of their first purchase). This highlights trends in customer engagement and loyalty over time:
+
+- **Key Observations:**
+  
+1. **Highest Engagement:**
+
+**December 2010 Cohort:**
+
+**Average Repeat Purchases:** 192.85
+
+- This cohort shows the highest engagement, likely due to holiday season promotions or effective onboarding strategies.
+
+2. **Moderate Engagement:**
+
+**January 2011 Cohort:**
+
+**Average Repeat Purchases:** 109.12
+
+**August 2011 Cohort:**
+
+**Average Repeat Purchases:** 91.48
+
+- These cohorts demonstrate strong but slightly lower engagement compared to December 2010.
+
+**Lower Engagement:**
+
+**November 2011 Cohort:**
+
+**Average Repeat Purchases:** 26.96
+
+**October 2011 Cohort:**
+
+**Average Repeat Purchases:** 44.67
+
+- These cohorts show the lowest engagement, indicating potential issues with retention or customer satisfaction during this period.
+
+**General Trend:** Engagement tends to decline over the year, with the highest averages in December 2010 and the lowest in November 2011.
+
+Actionable Insights:
+Leverage High-Engagement Cohorts:
+
+Analyze what made the December 2010 and January 2011 cohorts so successful (e.g., holiday promotions, marketing campaigns) and replicate these strategies.
+
+Improve Low-Engagement Cohorts:
+
+Investigate why the November 2011 and October 2011 cohorts have lower engagement. Possible reasons include ineffective onboarding, lack of follow-up, or seasonal factors.
+
+Targeted Retention Strategies:
+
+For cohorts with moderate engagement (e.g., February–August 2011), implement targeted retention strategies, such as personalized offers or loyalty programs, to increase repeat purchases.
+
+Seasonal Adjustments:
+
+If the decline in engagement is seasonal, plan ahead by optimizing marketing and retention efforts for weaker months (e.g., November).
+
 
 
