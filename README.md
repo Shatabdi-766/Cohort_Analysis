@@ -1299,58 +1299,861 @@ ORDER BY COHORT_MONTH;
 
 - The dataset provides the average repeat purchases for customers grouped by their cohort month (the month of their first purchase). This highlights trends in customer engagement and loyalty over time:
 
-- **Key Observations:**
+- **Key Observations :**
   
-1. **Highest Engagement:**
+1. **Highest Engagement :**
 
-**December 2010 Cohort:**
+**December 2010 Cohort :**
 
-**Average Repeat Purchases:** 192.85
+**Average Repeat Purchases :** 192.85
 
 - This cohort shows the highest engagement, likely due to holiday season promotions or effective onboarding strategies.
 
-2. **Moderate Engagement:**
+2. **Moderate Engagement :**
 
-**January 2011 Cohort:**
+**January 2011 Cohort :**
 
-**Average Repeat Purchases:** 109.12
+**Average Repeat Purchases :** 109.12
 
-**August 2011 Cohort:**
+**August 2011 Cohort :**
 
-**Average Repeat Purchases:** 91.48
+**Average Repeat Purchases :** 91.48
 
 - These cohorts demonstrate strong but slightly lower engagement compared to December 2010.
 
-**Lower Engagement:**
+**Lower Engagement :**
 
-**November 2011 Cohort:**
+**November 2011 Cohort :**
 
-**Average Repeat Purchases:** 26.96
+**Average Repeat Purchases :** 26.96
 
-**October 2011 Cohort:**
+**October 2011 Cohort :**
 
-**Average Repeat Purchases:** 44.67
+**Average Repeat Purchases :** 44.67
 
 - These cohorts show the lowest engagement, indicating potential issues with retention or customer satisfaction during this period.
 
-**General Trend:** Engagement tends to decline over the year, with the highest averages in December 2010 and the lowest in November 2011.
+**General Trend :** Engagement tends to decline over the year, with the highest averages in December 2010 and the lowest in November 2011.
 
-Actionable Insights:
-Leverage High-Engagement Cohorts:
+- **Actionable Insights :**
+  
+1. **Leverage High-Engagement Cohorts :** Analyze what made the December 2010 and January 2011 cohorts so successful (e.g., holiday promotions, marketing campaigns) and replicate these strategies.
 
-Analyze what made the December 2010 and January 2011 cohorts so successful (e.g., holiday promotions, marketing campaigns) and replicate these strategies.
+2. **Improve Low-Engagement Cohorts :** Investigate why the November 2011 and October 2011 cohorts have lower engagement. Possible reasons include ineffective onboarding, lack of follow-up, or seasonal factors.
 
-Improve Low-Engagement Cohorts:
+3. **Targeted Retention Strategies :** For cohorts with moderate engagement (e.g., February–August 2011), implement targeted retention strategies, such as personalized offers or loyalty programs, to increase repeat purchases.
 
-Investigate why the November 2011 and October 2011 cohorts have lower engagement. Possible reasons include ineffective onboarding, lack of follow-up, or seasonal factors.
+4. **Seasonal Adjustments :** If the decline in engagement is seasonal, plan ahead by optimizing marketing and retention efforts for weaker months (e.g., November).
 
-Targeted Retention Strategies:
+## Determine the average number of months between a customer's first and last purchase for each cohort :
+```sql
+-- determine the average number of months between a customer's first and last purchase for each cohort.
 
-For cohorts with moderate engagement (e.g., February–August 2011), implement targeted retention strategies, such as personalized offers or loyalty programs, to increase repeat purchases.
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        DATE_FORMAT(MIN(INVOICEDATE), '%Y-%m') AS COHORT_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
 
-Seasonal Adjustments:
+LastPurchase AS (
+    -- Step 2: Find the last purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MAX(INVOICEDATE) AS LAST_PURCHASE_DATE
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
 
-If the decline in engagement is seasonal, plan ahead by optimizing marketing and retention efforts for weaker months (e.g., November).
+CustomerLifespan AS (
+    -- Step 3: Calculate the number of months between the first and last purchase for each customer
+    SELECT 
+        FP.CUSTOMERID,
+        FP.COHORT_MONTH,
+        TIMESTAMPDIFF(MONTH, FP.FIRST_PURCHASE_DATE, LP.LAST_PURCHASE_DATE) AS LIFESPAN_MONTHS
+    FROM FirstPurchase FP
+    JOIN LastPurchase LP
+        ON FP.CUSTOMERID = LP.CUSTOMERID
+)
 
+-- Step 4: Calculate the average lifespan for each cohort
+SELECT 
+    COHORT_MONTH,
+    AVG(LIFESPAN_MONTHS) AS AVG_LIFESPAN_MONTHS
+FROM CustomerLifespan
+GROUP BY COHORT_MONTH
+ORDER BY COHORT_MONTH;
+```
+--Output--
+| COHORT_MONTH | AVG_LIFESPAN_MONTHS |
+|-------------|----------------------|
+| 2010-12     | 8.3853               |
+| 2011-01     | 6.4676               |
+| 2011-02     | 5.3053               |
+| 2011-03     | 4.2788               |
+| 2011-04     | 3.4233               |
+| 2011-05     | 2.9507               |
+| 2011-06     | 2.4463               |
+| 2011-07     | 1.5904               |
+| 2011-08     | 1.142                |
+| 2011-09     | 0.6689               |
+| 2011-10     | 0.2207               |
+| 2011-11     | 0.0309               |
+| 2011-12     | 0                    |
 
+- The dataset provides the average lifespan (in months) for customers grouped by their cohort month (the month of their first purchase). This metric reflects how long customers remain engaged with the business after their initial purchase.
+
+- **Key Observations :**
+
+1. **Longest Lifespan :**
+
+ **December 2010 Cohort :**
+
+**Average Lifespan :** 8.39 months
+
+- This cohort has the longest engagement, likely due to effective onboarding, holiday season promotions, or strong customer retention 
+  strategies.
+
+**Declining Lifespan Over Time :**
+
+- The average lifespan decreases steadily from December 2010 to December 2011:
+
+**January 2011 :** 6.47 months
+
+**February 2011 :** 5.31 months
+
+**March 2011 :** 4.28 months
+
+**November 2011 :** 0.03 months
+
+**December 2011 :** 0 months (customers churned immediately).
+
+2. **Lowest Lifespan :**
+
+**November and December 2011 Cohorts :**
+
+**Average Lifespan :** 0.03 months and 0 months, respectively.
+
+- These cohorts show almost no retention, indicating significant issues with customer satisfaction or engagement during this period.
+
+**Actionable Insights :**
+
+1. **Leverage Success of December 2010 Cohort :** Analyze what made the December 2010 cohort so successful (e.g., holiday promotions, onboarding process) and replicate these strategies for other cohorts.
+
+2. **Address Declining Lifespan :** Investigate why customer lifespans declined over the year.
+
+  
+3. **Possible reasons include :**
+
+- Changes in product offerings or pricing.
+
+- Ineffective marketing or retention strategies.
+
+- Seasonal factors impacting customer behavior.
+
+4. **Improve Retention for Later Cohorts :** For cohorts with short lifespans (e.g., November and December 2011), implement targeted retention strategies, such as:
+
+- Personalized follow-ups after the first purchase.
+
+- Loyalty programs or discounts for repeat purchases.
+
+- Surveys to understand and address customer dissatisfaction.
+
+5. **Seasonal Adjustments :** If the decline is seasonal, plan ahead by optimizing marketing and retention efforts for weaker months (e.g., November and December).
+
+## Cross-Cohort Comparison:
+### The activity of each customer by month :
+```sql
+-- Cross-Cohort Comparison:
+-- How would you compare the retention rates of two different 
+-- cohorts (e.g., customers who joined in January vs. February)?
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        DATE_FORMAT(MIN(INVOICEDATE), '%Y-%m') AS COHORT_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+MonthlyActivity AS (
+    -- Step 2: Calculate the activity of each customer by month
+    SELECT 
+        CUSTOMERID,
+        DATE_FORMAT(INVOICEDATE, '%Y-%m') AS ACTIVITY_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID, DATE_FORMAT(INVOICEDATE, '%Y-%m')
+)
+SELECT * FROM MONTHLYACTIVITY;
+```
+--Output--
+| CUSTOMERID | ACTIVITY_MONTH |
+|------------|----------------|
+| 17850      | 2010-12        |
+| 13047      | 2010-12        |
+| 12583      | 2010-12        |
+| 13748      | 2010-12        |
+| 15100      | 2010-12        |
+
+### How would you compare the retention rates of two different cohorts (e.g., customers who joined in January vs. February):
+```sql
+-- Cross-Cohort Comparison:
+-- How would you compare the retention rates of two different 
+-- cohorts (e.g., customers who joined in January vs. February)?
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        DATE_FORMAT(MIN(INVOICEDATE), '%Y-%m') AS COHORT_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+MonthlyActivity AS (
+    -- Step 2: Calculate the activity of each customer by month
+    SELECT 
+        CUSTOMERID,
+        DATE_FORMAT(INVOICEDATE, '%Y-%m') AS ACTIVITY_MONTH
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID, DATE_FORMAT(INVOICEDATE, '%Y-%m')
+),
+
+CohortRetention AS (
+    -- Step 3: Calculate retention for each cohort
+    SELECT 
+    FP.COHORT_MONTH,
+    MA.ACTIVITY_MONTH,
+    COUNT(DISTINCT FP.CUSTOMERID) AS COHORT_SIZE,
+    COUNT(DISTINCT MA.CUSTOMERID) AS ACTIVE_CUSTOMERS,
+    COUNT(DISTINCT MA.CUSTOMERID )*100.0 / COUNT(DISTINCT FP.CUSTOMERID) AS RETENTION_RATE
+	FROM FirstPurchase FP
+    LEFT JOIN MonthlyActivity MA
+        ON FP.CUSTOMERID = MA.CUSTOMERID
+        AND MA.ACTIVITY_MONTH >= FP.COHORT_MONTH
+    GROUP BY FP.COHORT_MONTH, MA.ACTIVITY_MONTH
+)
+
+-- Step 4: Compare retention rates for January and February cohorts
+     SELECT 
+    COHORT_MONTH, ACTIVITY_MONTH, RETENTION_RATE
+FROM
+    CohortRetention
+WHERE
+    COHORT_MONTH IN ('2011-01' , '2011-02')
+ORDER BY COHORT_MONTH , ACTIVITY_MONTH;
+```
+--Output--
+
+| COHORT_MONTH | ACTIVITY_MONTH | RETENTION_RATE |
+|--------------|----------------|----------------|
+| 2011-01      | 2011-01        | 100            |
+| 2011-01      | 2011-02        | 100            |
+| 2011-01      | 2011-03        | 100            |
+| 2011-01      | 2011-04        | 100            |
+| 2011-01      | 2011-05        | 100            |
+| 2011-01      | 2011-06        | 100            |
+| 2011-01      | 2011-07        | 100            |
+| 2011-01      | 2011-08        | 100            |
+| 2011-01      | 2011-09        | 100            |
+| 2011-01      | 2011-10        | 100            |
+| 2011-01      | 2011-11        | 100            |
+| 2011-01      | 2011-12        | 100            |
+| 2011-02      | 2011-02        | 100            |
+| 2011-02      | 2011-03        | 100            |
+| 2011-02      | 2011-04        | 100            |
+| 2011-02      | 2011-05        | 100            |
+| 2011-02      | 2011-06        | 100            |
+| 2011-02      | 2011-07        | 100            |
+| 2011-02      | 2011-08        | 100            |
+| 2011-02      | 2011-09        | 100            |
+| 2011-02      | 2011-10        | 100            |
+| 2011-02      | 2011-11        | 100            |
+| 2011-02      | 2011-12        | 100            |
+
+- The dataset shows the retention rates for two cohorts: January 2011 and February 2011. Both cohorts maintain a 100% retention rate throughout the year, indicating that all customers who joined in these months remained active for the entire 12-month period.
+
+**Key Observations :**
+
+1. **Perfect Retention :** Both cohorts show 100% retention in every month after their join date.
+
+2. This is highly unusual and suggests either: Exceptional customer retention strategies.
+
+3.  A data anomaly or specific business context (e.g., subscription-based model with no churn).
+
+4. **Comparison Between Cohorts :**
+
+- **January 2011 Cohort :** Retained 100% of customers from January to December 2011.
+
+- **February 2011 Cohort :** Retained 100% of customers from February to December 2011.
+
+- Both cohorts performed equally well, with no difference in retention rates.
+
+**Actionable Insights :**
+
+1. **Leverage Successful Strategies :** Analyze what made these cohorts so successful (e.g., onboarding process, product quality, customer support) and replicate these strategies for other cohorts.
+
+2. **Investigate Data Accuracy :** A 100% retention rate is rare. Verify the data to ensure it accurately reflects customer behavior.
+
+3. **Compare with Other Cohorts :** Compare these cohorts with others (e.g., December 2010 or March 2011) to identify differences in retention strategies or customer behavior.
+
+4. **Focus on Long-Term Engagement :** Since retention is already perfect, focus on increasing customer lifetime value (CLV) through upselling, cross-selling, or loyalty programs.
+
+## Segment customers into cohorts based on their first purchased product category and calculate their 6-month retention rates :
+```sql
+--  segment customers into cohorts based on their 
+-- first purchased product category and calculate their 6-month retention rates.
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date and product category for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        SUBSTRING_INDEX(GROUP_CONCAT(StockCode ORDER BY INVOICEDATE), ',', 1) AS FIRST_PRODUCT_CATEGORY
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+SixMonthActivity AS (
+    -- Step 2: Calculate the end of the 6-month period after the first purchase
+    SELECT 
+        FP.CUSTOMERID,
+        FP.FIRST_PRODUCT_CATEGORY,
+        FP.FIRST_PURCHASE_DATE,
+        DATE_ADD(FP.FIRST_PURCHASE_DATE, INTERVAL 6 MONTH) AS SIX_MONTH_END_DATE
+    FROM FirstPurchase FP
+),
+
+Retention AS (
+    -- Step 3: Identify customers who made a purchase within 6 months after their first purchase
+    SELECT 
+        SMA.CUSTOMERID,
+        SMA.FIRST_PRODUCT_CATEGORY
+    FROM SixMonthActivity SMA
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON SMA.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE > SMA.FIRST_PURCHASE_DATE
+        AND SR.INVOICEDATE <= SMA.SIX_MONTH_END_DATE
+    GROUP BY SMA.CUSTOMERID, SMA.FIRST_PRODUCT_CATEGORY
+)
+
+-- Step 4: Calculate the 6-month retention rate for each product category cohort
+SELECT 
+    FP.FIRST_PRODUCT_CATEGORY,
+    COUNT(DISTINCT R.CUSTOMERID) * 100.0 / COUNT(DISTINCT FP.CUSTOMERID) AS SIX_MONTH_RETENTION_RATE
+FROM FirstPurchase FP
+LEFT JOIN Retention R
+    ON FP.CUSTOMERID = R.CUSTOMERID
+GROUP BY FP.FIRST_PRODUCT_CATEGORY
+ORDER BY FP.FIRST_PRODUCT_CATEGORY;
+```
+--Output--
+
+| FIRST_PRODUCT_CATEGORY | SIX_MONTH_RETENTION_RATE |
+|------------------------|--------------------------|
+| 10125                  | 100                      |
+| 10135                  | 100                      |
+| 15034                  | 0                        |
+| 15036                  | 70                       |
+| 15039                  | 66.66667                 |
+| 15044C                 | 100                      |
+| 15044D                 | 66.66667                 |
+| 15056BL                | 50                       |
+| 15056N                 | 37.5                     |
+| 15056P                 | 50                       |
+| 15058B                 | 0                        |
+| 15058C                 | 0                        |
+| 15060B                 | 0                        |
+| 16014                  | 75                       |
+
+- This dataset provides the six-month retention rates for customers based on their first product category. Retention rates vary significantly across categories, highlighting differences in customer engagement and loyalty.
+
+- **Key Observations :**
+
+1. **High Retention (100%) :** 
+- **10125, 10135, and 15044C**: These product categories have a 100% retention rate, indicating strong customer satisfaction and loyalty.
+
+2. **Moderate Retention (50–75%) :**
+- **15036**: 70% retention.
+- **15039**: 66.67% retention.
+- **15044D**: 66.67% retention.
+- **16014**: 75% retention.
+
+These categories show decent retention but have room for improvement.
+
+3. **Low Retention (0–50%) :**
+- **15034, 15058B, 15058C, and 15060B**: 0% retention.
+- **15056N**: 37.5% retention.
+- **15056BL and 15056P**: 50% retention.
+
+These categories struggle with customer retention, indicating potential issues with product quality, satisfaction, or relevance.
+
+- **Actionable Insights :**
+
+**Leverage High-Retention Categories :** 
+- Analyze what makes categories like **10125, 10135, and 15044C** successful (e.g., product quality, customer support) and replicate these strategies for other categories.
+
+**Improve Moderate-Retention Categories :**
+- For categories like **15036, 15039, and 16014**, implement targeted retention strategies, such as personalized follow-ups or loyalty programs.
+
+**Address Low-Retention Categories :**
+- Investigate why categories like **15034, 15058B, and 15060B** have 0% retention. Possible reasons include:
+  - Poor product quality or mismatch with customer expectations.
+  - Lack of post-purchase engagement or support.
+- Conduct surveys or feedback sessions to identify and address pain points.
+
+**Product Optimization :**
+- For categories with low retention, consider improving product features, pricing, or marketing to better align with customer needs.
+
+## Percentiles for spending Group :
+```sql
+-- create cohorts based on customer behavior, such as high-spending vs. low-spending customers?
+WITH CustomerSpending AS (
+    -- Step 1: Calculate total spending for each customer
+    SELECT 
+        CUSTOMERID,
+        ROUND(SUM(QUANTITY * UNITPRICE),0) AS TOTAL_SPENDING
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+SPENDINGPERCENTILE AS (
+    -- Step 2: Calculate percentiles for spending
+
+SELECT 
+CUSTOMERID,
+TOTAL_SPENDING,
+NTILE(5) OVER (order by TOTAL_SPENDING DESC) AS SPENDING_GROUP
+FROM CustomerSpending
+)
+
+SELECT * FROM SPENDINGPERCENTILE;
+```
+--Output--
+
+| CUSTOMERID | TOTAL_SPENDING | SPENDING_GROUP |
+|------------|----------------|----------------|
+| 14646      | 280206         | 1              |
+| 18102      | 259657         | 1              |
+| 17450      | 194551         | 1              |
+| 16446      | 168472         | 1              |
+| 15392      | 1536           | 2              |
+| 12877      | 1536           | 2              |
+| 15625      | 1534           | 2              |
+| 13107      | 1532           | 2              |
+| 14236      | 491            | 3              |
+| 15000      | 491            | 3              |
+| 18074      | 490            | 3              |
+| 14416      | 490            | 3              |
+| 12809      | 489            | 4              |
+| 15165      | 488            | 4              |
+| 18249      | 95             | 5              |
+| 16387      | 94             | 5              |
+| 15397      | 94             | 5              |
+
+- This dataset categorizes customers into spending groups based on their total spending, revealing distinct patterns in customer behavior.
+
+- **Key Observations :**
+
+**High-Spending Customers (Group 1)**
+- **Total Spending**: $168,472 to $280,206.
+- **Examples**: Customers 14646, 18102, 17450, and 16446.
+- These customers are the most valuable, contributing significantly to revenue.
+
+**Moderate-Spending Customers (Group 2)**
+- **Total Spending**: $1,532 to $1,536.
+- **Examples**: Customers 15392, 12877, 15625, and 13107.
+- These customers show moderate engagement and represent a stable revenue stream.
+
+**Low-Spending Customers (Groups 3–5)**
+- **Group 3**: $490 to $491 (e.g., Customers 14236, 15000, 18074, 14416).
+- **Group 4**: $488 to $489 (e.g., Customers 12809, 15165).
+- **Group 5**: $94 to $95 (e.g., Customers 18249, 16387, 15397).
+- These customers contribute minimally to revenue and may represent opportunities for upselling or re-engagement.
+
+- **Actionable Insights**
+
+**High-Spending Customers (Group 1)**
+- **Action**: Reward and nurture these customers with exclusive perks, loyalty programs, or personalized offers to maintain their loyalty.
+
+**Moderate-Spending Customers (Group 2)**
+- **Action**: Implement upselling or cross-selling strategies to increase their spending and move them into the high-spending group.
+
+**Low-Spending Customers (Groups 3–5)**
+- **Action**:
+  - For **Groups 3 and 4**, focus on increasing engagement through targeted campaigns or product recommendations.
+  - For **Group 5**, investigate reasons for low spending (e.g., lack of interest, dissatisfaction) and address them through personalized outreach or incentives.
+
+## Compare the 3-month retention rates of customers who joined in Q1 vs. Q2. :
+```sql
+-- compare the 3-month retention rates of customers who joined in Q1 vs. Q2.
+WITH FirstPurchase AS (
+    -- Step 1: Find the first purchase date for each customer
+    SELECT 
+        CUSTOMERID,
+        MIN(INVOICEDATE) AS FIRST_PURCHASE_DATE,
+        QUARTER(MIN(INVOICEDATE)) AS JOIN_QUARTER
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+),
+
+ThirdMonthActivity AS (
+    -- Step 2: Calculate the start and end of the third month after the first purchase
+    SELECT 
+        FP.CUSTOMERID,
+        FP.JOIN_QUARTER,
+        DATE_ADD(FP.FIRST_PURCHASE_DATE, INTERVAL 2 MONTH) AS START_THIRD_MONTH,
+        DATE_ADD(FP.FIRST_PURCHASE_DATE, INTERVAL 3 MONTH) AS END_THIRD_MONTH
+    FROM FirstPurchase FP
+),
+
+ThirdMonthPurchases AS (
+    -- Step 3: Identify customers who made a purchase in the third month
+    SELECT 
+        TMA.CUSTOMERID,
+        TMA.JOIN_QUARTER
+    FROM ThirdMonthActivity TMA
+    JOIN SALES_RETAIL_II_CLEANED SR
+        ON TMA.CUSTOMERID = SR.CUSTOMERID
+        AND SR.INVOICEDATE >= TMA.START_THIRD_MONTH
+        AND SR.INVOICEDATE < TMA.END_THIRD_MONTH
+    GROUP BY TMA.CUSTOMERID, TMA.JOIN_QUARTER
+)
+
+-- Step 4: Calculate the 3-month retention rate for Q1 and Q2 cohorts
+SELECT 
+    FP.JOIN_QUARTER,
+    COUNT(DISTINCT TMP.CUSTOMERID) * 100.0 / COUNT(DISTINCT FP.CUSTOMERID) AS THREE_MONTH_RETENTION_RATE
+FROM FirstPurchase FP
+LEFT JOIN ThirdMonthPurchases TMP
+    ON FP.CUSTOMERID = TMP.CUSTOMERID
+WHERE FP.JOIN_QUARTER IN (1, 2) -- Filter for Q1 and Q2 cohorts
+GROUP BY FP.JOIN_QUARTER
+ORDER BY FP.JOIN_QUARTER;
+```
+--Output--
+## Three Month Retention Rate by Join Quarter
+
+| JOIN_QUARTER | THREE_MONTH_RETENTION_RATE |
+|--------------|----------------------------|
+| 1            | 25.22018                   |
+| 2            | 16.94915                   |
+
+- This dataset provides the three-month retention rates for customers grouped by their join quarter, revealing insights into customer engagement and loyalty trends.
+
+- **Key Observations :**
+
+1. **Q1 (Quarter 1)**
+- **Retention Rate**: 25.22%
+- This indicates that approximately 25% of customers who joined in Q1 remained active after three months.
+
+2. **Q2 (Quarter 2)**
+- **Retention Rate**: 16.95%
+- This indicates that approximately 17% of customers who joined in Q2 remained active after three months.
+
+3. **Higher Retention in Q1**
+- Customers who joined in Q1 have a higher retention rate (25.22%) compared to those who joined in Q2 (16.95%).
+- This could be due to factors such as New Year promotions, post-holiday engagement, or effective onboarding strategies.
+
+4. **Lower Retention in Q2**
+- The drop in retention for Q2 suggests potential issues with customer engagement or satisfaction during this period.
+
+**Actionable Insights :**
+
+1. **Leverage Q1 Success**
+- Analyze what made Q1 successful (e.g., marketing campaigns, product launches) and replicate these strategies for other quarters.
+
+2. **Improve Q2 Retention**
+- Investigate why retention is lower in Q2. Possible reasons include:
+  - Seasonal factors (e.g., fewer promotions or events).
+  - Changes in customer behavior or preferences.
+  - Ineffective onboarding or follow-up strategies.
+
+3. **Targeted Retention Strategies**
+- Implement targeted retention campaigns for Q2 customers, such as personalized offers, loyalty programs, or surveys to address dissatisfaction.
+
+## Create cohorts based on customer behavior, such as high-spending vs. low-spending customers :
+```sql
+-- create cohorts based on customer behavior, such as high-spending vs. low-spending customers
+WITH CustomerSpending AS (
+    -- Step 1: Calculate total spending for each customer
+    SELECT 
+        CUSTOMERID,
+        ROUND(SUM(QUANTITY * UNITPRICE),0) AS TOTAL_SPENDING
+    FROM SALES_RETAIL_II_CLEANED
+    GROUP BY CUSTOMERID
+)
+-- Step 2: Assign customers to cohorts based on fixed thresholds
+SELECT 
+CUSTOMERID,
+TOTAL_SPENDING,
+CASE
+WHEN TOTAL_SPENDING > 1000 THEN 'HIGH_SPENDING'
+WHEN TOTAL_SPENDING between 500 AND 1000 THEN 'MEDIUM_SPENDING'
+WHEN TOTAL_SPENDING < 500 THEN 'LOW_SPENDING'
+END AS SPENDING_COHORT
+FROM CustomerSpending
+ORDER BY TOTAL_SPENDING DESC;
+```
+--Output--
+| CUSTOMERID | TOTAL_SPENDING | SPENDING_COHORT  |
+|------------|---------------|------------------|
+| 14646      | 280206        | HIGH_SPENDING   |
+| 18102      | 259657        | HIGH_SPENDING   |
+| 17450      | 194551        | HIGH_SPENDING   |
+| 14050      | 746           | MEDIUM_SPENDING |
+| 14790      | 745           | MEDIUM_SPENDING |
+| 13950      | 745           | MEDIUM_SPENDING |
+| 13236      | 745           | MEDIUM_SPENDING |
+| 16529      | 455           | LOW_SPENDING    |
+| 15585      | 455           | LOW_SPENDING    |
+| 13485      | 454           | LOW_SPENDING    |
+
+- This dataset categorizes customers into spending cohorts based on their total spending, revealing distinct patterns in customer behavior and revenue contribution.
+
+- **Key Observations :**
+
+1. **High-Spending Cohort**
+- **Spending Range**: $194,551 – $280,206.
+- **Examples**: Customers 14646, 18102.
+- These customers contribute significantly to revenue and are highly valuable.
+
+2. **Medium-Spending Cohort**
+- **Spending Range**: $745 – $746.
+- **Examples**: Customers 14050, 14790.
+- These customers represent a stable but moderate revenue stream.
+
+3. **Low-Spending Cohort**
+- **Spending Range**: $454 – $455.
+- **Examples**: Customers 16529, 15585.
+- These customers contribute minimally to revenue and may represent opportunities for re-engagement.
+
+- **Actionable Insights :**
+
+1. **High-Spending Cohort**
+- **Action**: Reward these customers with loyalty programs, exclusive perks, or personalized offers to maintain their loyalty and encourage repeat purchases.
+
+2. **Medium-Spending Cohort**
+- **Action**: Implement upselling or cross-selling strategies to increase their spending and move them into the high-spending cohort.
+
+3. **Low-Spending Cohort**
+- **Action**: Re-engage these customers with targeted campaigns, incentives, or product recommendations to boost their spending and improve retention.
+
+# COHORT ANALYSIS/ CUSTOMER RETENTION ANALYSIS ON CUSTOMER LEVEL :
+```sql
+-- COHORT ANALYSIS/ CUSTOMER RETENTION ANALYSIS ON CUSTOMER LEVEL
+WITH CTE1 AS (
+SELECT 
+    InvoiceNo,
+    InvoiceDate,
+    CUSTOMERID,
+    abs(ROUND(QUANTITY * UNITPRICE, 2)) AS REVENUE
+FROM
+    sales_retail_ii_cleaned
+WHERE
+    CustomerID IS NOT NULL
+ORDER BY CustomerID
+),
+
+CTE2 AS (
+SELECT 
+        InvoiceNo, 
+        CUSTOMERID, 
+        INVOICEDATE, 
+        DATE_FORMAT(INVOICEDATE, '%Y-%m-01') AS PURCHASE_MONTH,
+        DATE_FORMAT(MIN(INVOICEDATE) OVER (PARTITION BY CUSTOMERID ORDER BY INVOICEDATE), '%Y-%m-01') AS 
+        FIRST_PURCHASE_MONTH,
+        REVENUE
+    FROM CTE1
+
+),
+CTE3 AS (
+SELECT 
+CUSTOMERID,
+FIRST_PURCHASE_MONTH,
+concat(
+'MONTH_',
+PERIOD_DIFF(
+EXTRACT(YEAR_MONTH FROM PURCHASE_MONTH),
+EXTRACT(YEAR_MONTH FROM FIRST_PURCHASE_MONTH)
+)) AS COHORT_MONTH
+FROM CTE2
+)
+SELECT FIRST_PURCHASE_MONTH AS COHORT,
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_0',CUSTOMERID, NULL)) AS 'MONTH_0',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_1',CUSTOMERID, NULL)) AS 'MONTH_1',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_2',CUSTOMERID, NULL)) AS 'MONTH_2',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_3',CUSTOMERID, NULL)) AS 'MONTH_3',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_4',CUSTOMERID, NULL)) AS 'MONTH_4',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_5',CUSTOMERID, NULL)) AS 'MONTH_5',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_6',CUSTOMERID, NULL)) AS 'MONTH_6',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_7',CUSTOMERID, NULL)) AS 'MONTH_7',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_8',CUSTOMERID, NULL)) AS 'MONTH_8',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_9',CUSTOMERID, NULL)) AS 'MONTH_9',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_10',CUSTOMERID, NULL)) AS 'MONTH_10',
+COUNT(DISTINCT IF (COHORT_MONTH = 'MONTH_11',CUSTOMERID, NULL)) AS 'MONTH_11'
+FROM CTE3
+GROUP BY FIRST_PURCHASE_MONTH
+ORDER BY FIRST_PURCHASE_MONTH;
+```
+--Output--
+
+| COHORT     | MONTH_0 | MONTH_1 | MONTH_2 | MONTH_3 | MONTH_4 | MONTH_5 | MONTH_6 | MONTH_7 | MONTH_8 | MONTH_9 | MONTH_10 | MONTH_11 |
+|------------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|----------|----------|
+| 12/1/2010  | 885     | 324     | 286     | 340     | 321     | 352     | 321     | 309     | 313     | 350     | 331      | 445      |
+| 1/1/2011   | 417     | 92      | 111     | 96      | 134     | 120     | 103     | 101     | 125     | 136     | 152      | 49       |
+| 2/1/2011   | 380     | 71      | 71      | 108     | 103     | 94      | 96      | 106     | 94      | 116     | 26       | 0        |
+| 3/1/2011   | 452     | 68      | 114     | 90      | 101     | 76      | 121     | 104     | 126     | 39      | 0        | 0        |
+| 4/1/2011   | 300     | 64      | 61      | 63      | 59      | 68      | 65      | 78      | 22      | 0       | 0        | 0        |
+| 5/1/2011   | 284     | 54      | 49      | 49      | 59      | 66      | 75      | 27      | 0       | 0       | 0        | 0        |
+| 6/1/2011   | 242     | 42      | 38      | 64      | 56      | 81      | 23      | 0       | 0       | 0       | 0        | 0        |
+| 7/1/2011   | 188     | 34      | 39      | 42      | 51      | 21      | 0       | 0       | 0       | 0       | 0        | 0        |
+| 8/1/2011   | 169     | 35      | 42      | 41      | 21      | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 9/1/2011   | 299     | 70      | 90      | 34      | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 10/1/2011  | 358     | 86      | 41      | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 11/1/2011  | 324     | 36      | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 12/1/2011  | 41      | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+
+- This dataset provides a cohort analysis showing customer retention over 12 months for different cohorts (groups of customers based on their join month). Below is a breakdown of the key observations and actionable insights.
+
+- **Key Observations :**
+
+1. **December 2010 Cohort**
+- **Retention**: Starts with 885 customers in Month 0 and retains 445 customers by Month 11.
+- **Trend**: Steady retention with a slight increase in Month 11, possibly due to holiday season effects.
+
+2. **January 2011 Cohort**
+- **Retention**: Starts with 417 customers in Month 0 and drops to 49 customers by Month 11.
+- **Trend**: Gradual decline, with a sharp drop in Month 11.
+
+3. **Later Cohorts (February–December 2011)**
+- **Retention**: Declines rapidly after Month 0, with most cohorts losing all customers by Month 6–8.
+- **Trend**: Shorter retention periods, indicating weaker customer engagement over time.
+
+- **Actionable Insights :**
+
+1. **Leverage December 2010 Success**
+- Analyze what made the December 2010 cohort successful (e.g., holiday promotions, onboarding) and replicate these strategies for other cohorts.
+
+2. **Improve Retention for Later Cohorts**
+- Investigate why retention drops sharply for cohorts like January 2011 and later. Possible reasons include:
+  - Ineffective onboarding or follow-up.
+  - Lack of engagement strategies post-purchase.
+- Implement targeted retention campaigns, such as personalized offers or loyalty programs.
+
+3. **Focus on Early Retention**
+- Since most cohorts lose customers within 6–8 months, prioritize strategies to retain customers in the first few months (e.g., post-purchase follow-ups, discounts for repeat purchases).
+
+# COHORT ANALYSIS ON REVENUE :
+```sql
+WITH CTE1 AS (
+SELECT 
+    InvoiceNo,
+    InvoiceDate,
+    CUSTOMERID,
+    abs(ROUND(QUANTITY * UNITPRICE, 2)) AS REVENUE
+FROM
+    sales_retail_ii_cleaned
+WHERE
+    CustomerID IS NOT NULL
+ORDER BY CustomerID
+),
+
+CTE2 AS (
+SELECT 
+        InvoiceNo, 
+        CUSTOMERID, 
+        INVOICEDATE, 
+        DATE_FORMAT(INVOICEDATE, '%Y-%m-01') AS PURCHASE_MONTH,
+        DATE_FORMAT(MIN(INVOICEDATE) OVER (PARTITION BY CUSTOMERID ORDER BY INVOICEDATE), '%Y-%m-01') AS 
+        FIRST_PURCHASE_MONTH,
+        REVENUE
+    FROM CTE1
+
+),
+CTE3 AS (
+SELECT 
+CUSTOMERID,
+REVENUE,
+FIRST_PURCHASE_MONTH AS COHORT,
+concat(
+'MONTH_',
+PERIOD_DIFF(
+EXTRACT(YEAR_MONTH FROM PURCHASE_MONTH),
+EXTRACT(YEAR_MONTH FROM FIRST_PURCHASE_MONTH)
+)) AS COHORT_MONTH
+FROM CTE2
+)
+SELECT COHORT,
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_0',REVENUE, 0)),0) AS 'MONTH_0',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_1',REVENUE, 0)),0) AS 'MONTH_1',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_2',REVENUE, 0)),0) AS 'MONTH_2',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_3',REVENUE, 0)),0) AS 'MONTH_3',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_4',REVENUE, 0)),0) AS 'MONTH_4',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_5',REVENUE, 0)),0) AS 'MONTH_5',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_6',REVENUE, 0)),0) AS 'MONTH_6',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_7',REVENUE, 0)),0) AS 'MONTH_7',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_8',REVENUE, 0)),0) AS 'MONTH_8',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_9',REVENUE, 0)),0) AS 'MONTH_9',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_10',REVENUE, 0)),0) AS 'MONTH_10',
+ROUND(SUM(DISTINCT IF (COHORT_MONTH = 'MONTH_11',REVENUE, 0)),0) AS 'MONTH_11'
+FROM CTE3
+GROUP BY COHORT
+ORDER BY COHORT;
+```
+--Output--
+## Cohort Revenue Table
+
+| COHORT     | MONTH_0  | MONTH_1  | MONTH_2  | MONTH_3  | MONTH_4  | MONTH_5  | MONTH_6  | MONTH_7  | MONTH_8  | MONTH_9  | MONTH_10 | MONTH_11 |
+|------------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|----------|----------|
+| 12/1/2010  | 113725  | 74541   | 59628   | 80790   | 46371   | 99181   | 89924   | 93134   | 100893  | 149378  | 145263   | 115552   |
+| 1/1/2011   | 134680  | 23902   | 22425   | 43612   | 23937   | 31233   | 25140   | 26370   | 20055   | 35324   | 44199    | 13066    |
+| 2/1/2011   | 26279   | 13324   | 16282   | 12573   | 9755    | 9951    | 15395   | 15743   | 16316   | 18688   | 5159     | 0        |
+| 3/1/2011   | 28965   | 11354   | 17926   | 12554   | 15077   | 10097   | 16159   | 17892   | 17571   | 5807    | 0        | 0        |
+| 4/1/2011   | 18711   | 9247    | 8506    | 5677    | 7220    | 7551    | 6977    | 8954    | 2611    | 0       | 0        | 0        |
+| 5/1/2011   | 27070   | 7370    | 8043    | 5532    | 6904    | 7773    | 8363    | 172587  | 0       | 0       | 0        | 0        |
+| 6/1/2011   | 63823   | 7317    | 5685    | 11396   | 8962    | 15845   | 4032    | 0       | 0       | 0       | 0        | 0        |
+| 7/1/2011   | 15700   | 4927    | 4462    | 4734    | 5620    | 2577    | 0       | 0       | 0       | 0       | 0        | 0        |
+| 8/1/2011   | 15856   | 8921    | 11286   | 17479   | 7487    | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 9/1/2011   | 26598   | 7644    | 8833    | 3620    | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 10/1/2011  | 31442   | 9524    | 5207    | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 11/1/2011  | 25303   | 7298    | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+| 12/1/2011  | 19637   | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0       | 0        | 0        |
+
+- This dataset provides a cohort analysis showing revenue retention over 12 months for different cohorts (groups of customers based on their join month). Below is a breakdown of the key observations and actionable insights.
+
+- **Key Observations :**
+
+1. **December 2010 Cohort**
+- **Revenue**: Starts with $113,725 in **Month 0** and peaks at $149,378 in **Month 9**, ending at $115,552 in **Month 11**.
+- **Trend**: Strong and steady revenue retention, with a significant increase in Month 9, likely due to holiday season effects.
+
+2. **January 2011 Cohort**
+- **Revenue**: Starts with $134,680 in **Month 0** and drops to $13,066 by **Month 11**.
+- **Trend**: Gradual decline, with a sharp drop in Month 11.
+
+3. **Later Cohorts (February–December 2011)**
+- **Revenue**: Declines rapidly after Month 0, with most cohorts generating $0 revenue by Month 6–8.
+- **Trend**: Shorter revenue retention periods, indicating weaker customer engagement and spending over time.
+
+4. **Outlier**
+- **May 2011 Cohort**: Shows a spike in **Month 7** ($172,587), which is unusual and may indicate a data anomaly or a one-time large purchase.
+
+- **Actionable Insights :**
+
+1. **Leverage December 2010 Success**
+- Analyze what made the December 2010 cohort successful (e.g., holiday promotions, onboarding) and replicate these strategies for other cohorts.
+
+2. **Improve Revenue Retention for Later Cohorts**
+- Investigate why revenue drops sharply for cohorts like January 2011 and later. Possible reasons include:
+  - Ineffective onboarding or follow-up.
+  - Lack of engagement strategies post-purchase.
+- Implement targeted retention campaigns, such as personalized offers or loyalty programs.
+
+3. **Focus on Early Revenue Retention**
+- Since most cohorts lose revenue-generating customers within 6–8 months, prioritize strategies to retain customers in the first few months (e.g., post-purchase follow-ups, discounts for repeat purchases).
+
+4. **Investigate Outliers**
+- Examine the May 2011 cohort's spike in **Month 7** to determine if it was due to a specific event, promotion, or data error.
 
